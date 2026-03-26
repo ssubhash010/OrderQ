@@ -347,9 +347,34 @@ export default function App() {
   }
 
   // Show sign-in page when not authenticated
+  // if (!session) {
+  //   return <StudentLogin />
+  // }
   if (!session) {
-    return <StudentLogin />
+    return <StudentLogin onNavigate={navigate} />
   }
+
+  // In App.js
+if (session && !session.user.email_confirmed_at) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50">
+      <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm">
+        <h2 className="text-xl font-bold text-gray-800">Verify Your Email</h2>
+        <p className="text-gray-500 mt-2 text-sm">
+          A confirmation link was sent to <b>{session.user.email}</b>. 
+          Please click it to activate your account.
+        </p>
+        <button 
+          onClick={() => supabase.auth.signOut()}
+          className="mt-6 w-full bg-primary text-white py-3 rounded-xl font-bold"
+        >
+          Return to Login
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
   // Page renderer
   const renderPage = () => {
