@@ -1,10 +1,11 @@
 // src/pages/CanteenMenuPage.js
-import { useState }                    from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, ShoppingCart, Plus, Search } from 'lucide-react'
 import { getMenuByCanteen, getCategoriesByCanteen } from '../lib/menuData'
+import { supabase } from '../lib/supabaseClient'
 
 // ── Cart conflict modal ────────────────────────────────────────────────────────
-function ConflictModal({ existingCanteen, newCanteen, item, onConfirm, onCancel }) {
+function ConflictModal({ existingCanteen, newCanteen, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center p-4">
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
@@ -34,44 +35,71 @@ function ConflictModal({ existingCanteen, newCanteen, item, onConfirm, onCancel 
 }
 
 // ── Menu Item Card ─────────────────────────────────────────────────────────────
-function MenuItemCard({ item, qtyInCart, onAdd }) {
+function MenuItemCard({ item, isSoldOut, qtyInCart, onAdd }) {
   const [flash, setFlash] = useState(false)
 
   const handleAdd = () => {
+    if (isSoldOut) return
     onAdd(item)
     setFlash(true)
     setTimeout(() => setFlash(false), 700)
   }
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-orange-100 card-hover shadow-sm">
+    <div className={`bg-white rounded-2xl overflow-hidden border border-orange-100 card-hover shadow-sm transition-all ${isSoldOut ? 'opacity-60 grayscale-[0.3]' : ''}`}>
       <div className="relative h-44 overflow-hidden">
         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+        
+        {/* Price Tag */}
         <div className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full shadow">
           <span className="font-bold text-primary">₹{item.price}</span>
         </div>
+
+        {/* Prep Time */}
         <div className="absolute top-3 left-3 bg-black/40 text-white text-xs px-2 py-1 rounded-full">
           ⏱ {item.prepTime}
         </div>
-        {qtyInCart > 0 && (
-          <div className="absolute bottom-3 right-3 bg-primary text-white text-xs font-bold px-2 py-1 rounded-full">
+
+        {/* Sold Out Overlay */}
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+            <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-lg shadow-lg rotate-[-5deg] border-2 border-white text-sm uppercase tracking-wider">
+              Sold Out
+            </span>
+          </div>
+        )}
+        
+        {/* Cart Count Badge */}
+        {!isSoldOut && qtyInCart > 0 && (
+          <div className="absolute bottom-3 right-3 bg-primary text-white text-xs font-bold px-2 py-1 rounded-full animate-in fade-in zoom-in duration-300">
             ×{qtyInCart} in cart
           </div>
         )}
       </div>
+
       <div className="p-4">
         <h3 className="font-heading text-lg font-semibold text-gray-900 mb-1">{item.name}</h3>
-        <p className="text-sm text-gray-500 mb-3">{item.description}</p>
+        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+        
         <button
           onClick={handleAdd}
+          disabled={isSoldOut}
           className={`w-full rounded-full px-6 py-2.5 font-bold transition-all flex items-center justify-center gap-2 ${
-            flash
-              ? 'bg-green-500 text-white'
-              : 'bg-primary text-white shadow-button active:shadow-none active:translate-y-1 hover:bg-primary/90'
+            isSoldOut 
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+              : flash
+                ? 'bg-green-500 text-white'
+                : 'bg-primary text-white shadow-button active:shadow-none active:translate-y-1 hover:bg-primary/90'
           }`}
         >
-          <Plus className="w-4 h-4" />
-          {flash ? 'Added!' : 'Add to Cart'}
+          {isSoldOut ? (
+            'Unavailable'
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              {flash ? 'Added!' : 'Add to Cart'}
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -80,21 +108,68 @@ function MenuItemCard({ item, qtyInCart, onAdd }) {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate }) {
-  const [activeCategory,  setActiveCategory]  = useState('all')
-  const [search,          setSearch]          = useState('')
-  const [pendingItem,     setPendingItem]      = useState(null)  // item waiting on conflict resolution
+  const [activeCategory, setActiveCategory] = useState('all')
+  const [search, setSearch] = useState('')
+  const [pendingItem, setPendingItem] = useState(null)
+  
+  // Dynamic availability state
+  const [overrides, setOverrides] = useState(new Set())
 
   if (!canteen) {
     onNavigate('canteen-list')
     return null
   }
 
-  const allItems   = getMenuByCanteen(canteen.id)
+  useEffect(() => {
+    const proactiveCleanup = async () => {
+      try {
+        // Clear any 5-minute-old stale orders before they even reach checkout
+        await supabase.rpc('cleanup_stale_pending_orders');
+        console.log('Proactive cleanup: Stale orders cleared.');
+      } catch (err) {
+        console.error('Menu cleanup failed:', err);
+      }
+    };
+  
+    proactiveCleanup();
+  }, []); // Runs once when the menu loads
+
+  // 1. Fetch item availability overrides from Supabase
+  useEffect(() => {
+    const fetchStockStatus = async () => {
+      const { data } = await supabase
+        .from('item_overrides')
+        .select('item_id')
+        .eq('canteen_id', canteen.id)
+        .eq('is_available', false)
+
+      if (data) {
+        setOverrides(new Set(data.map(row => row.item_id)))
+      }
+    }
+
+    fetchStockStatus()
+
+    // 2. Real-time Sync (RT-5 style): update if staff toggles stock
+    const channel = supabase
+      .channel(`stock-${canteen.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'item_overrides',
+        filter: `canteen_id=eq.${canteen.id}`
+      }, () => fetchStockStatus())
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [canteen.id])
+
+  const allItems = getMenuByCanteen(canteen.id)
   const categories = getCategoriesByCanteen(canteen.id)
-  const cartCount  = cart.items.reduce((s, i) => s + i.quantity, 0)
+  const cartCount = cart.items.reduce((s, i) => s + i.quantity, 0)
 
   const filtered = allItems.filter(item => {
-    const matchCat    = activeCategory === 'all' || item.category === activeCategory
+    const matchCat = activeCategory === 'all' || item.category === activeCategory
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase())
     return matchCat && matchSearch
   })
@@ -102,7 +177,9 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
   const getQty = (itemId) => cart.items.find(i => i.id === itemId)?.quantity ?? 0
 
   const handleAddToCart = (item) => {
-    // Different canteen in cart → show conflict modal
+    // Prevent adding sold out items (extra layer of security)
+    if (overrides.has(item.id)) return
+
     if (cart.canteen && cart.canteen.id !== canteen.id && cart.items.length > 0) {
       setPendingItem(item)
       return
@@ -111,7 +188,7 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
   }
 
   const handleConflictConfirm = () => {
-    if (pendingItem) onAddToCart(pendingItem, canteen, true) // clearFirst=true
+    if (pendingItem) onAddToCart(pendingItem, canteen, true)
     setPendingItem(null)
   }
 
@@ -184,6 +261,7 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
               <MenuItemCard
                 key={item.id}
                 item={item}
+                isSoldOut={overrides.has(item.id)}
                 qtyInCart={getQty(item.id)}
                 onAdd={handleAddToCart}
               />
@@ -192,9 +270,9 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
         )}
       </div>
 
-      {/* Sticky checkout bar when cart has items */}
+      {/* Sticky checkout bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 max-w-screen-sm mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 max-w-screen-sm mx-auto z-40">
           <button
             onClick={() => onNavigate('cart')}
             className="w-full bg-primary text-white py-3.5 rounded-2xl font-bold shadow-button active:shadow-none active:translate-y-1 transition-all flex items-center justify-between px-5"
@@ -206,12 +284,11 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
         </div>
       )}
 
-      {/* Cart conflict modal */}
+      {/* Conflict Modal */}
       {pendingItem && (
         <ConflictModal
           existingCanteen={cart.canteen}
           newCanteen={canteen}
-          item={pendingItem}
           onConfirm={handleConflictConfirm}
           onCancel={() => setPendingItem(null)}
         />

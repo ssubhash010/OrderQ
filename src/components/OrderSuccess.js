@@ -1,55 +1,49 @@
-import React from 'react';
-import './OrderSuccess.css';
+import React from 'react'
 
-export default function OrderSuccess({ order, onNavigate }) {
-  if (!order) return null;
-
+export default function OrderSuccess({ token, onTrack }) {
   return (
-    <div className="success-container">
-      <div className="success-card">
-        {/* Success Icon */}
-        <div className="icon-wrapper">
-          <svg className="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-            <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
-            <path className="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-          </svg>
-        </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-in zoom-in fade-in duration-700">
+      
+      {/* THE TICK ANIMATION */}
+      <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 shadow-inner">
+        <svg 
+          className="w-14 h-14 text-green-500 animate-bounce" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth="4" 
+            d="M5 13l4 4L19 7" 
+          />
+        </svg>
+      </div>
 
-        <h1 className="success-title">Order Confirmed!</h1>
-        <p className="success-subtitle">Show this token at the counter</p>
+      <h1 className="text-3xl font-black text-gray-900 tracking-tight">Order Placed!</h1>
+      <p className="text-gray-500 mt-2 text-lg">Your meal is now being prepared.</p>
 
-        {/* Token Section */}
-        <div className="token-box">
-          <span className="token-label">YOUR TOKEN</span>
-          <div className="token-number">#{order.token_number}</div>
-        </div>
-
-        {/* Details Section */}
-        <div className="details-list">
-          <div className="detail-item">
-            <span>Canteen</span>
-            <strong>{order.canteen_id?.replace('_', ' ').toUpperCase()}</strong>
-          </div>
-          <div className="detail-item">
-            <span>Slot</span>
-            <strong>{order.pickup_slot}</strong>
-          </div>
-          <div className="detail-item">
-            <span>Amount</span>
-            <strong>₹{order.total_amount}</strong>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="button-group">
-          <button className="btn-primary" onClick={() => onNavigate('my-orders')}>
-            Track Order
-          </button>
-          <button className="btn-secondary" onClick={() => onNavigate('home')}>
-            Go to Home
-          </button>
+      {/* THE TOKEN CARD */}
+      <div className="mt-10 bg-gray-50 border-2 border-dashed border-gray-200 p-10 rounded-[2.5rem] w-full max-w-sm">
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Your Token Number</span>
+        <div className="text-7xl font-black text-primary mt-3 tabular-nums">
+          #{token || '...'}
         </div>
       </div>
+
+      <div className="mt-12 w-full max-w-sm flex flex-col gap-4">
+        <button 
+          onClick={onTrack}
+          className="w-full bg-black text-white py-5 rounded-2xl font-bold text-lg shadow-xl active:scale-95 transition-all"
+        >
+          Track My Order
+        </button>
+        
+        <p className="text-gray-400 text-xs px-4">
+          A copy of this receipt has been saved to your orders history.
+        </p>
+      </div>
     </div>
-  );
+  )
 }

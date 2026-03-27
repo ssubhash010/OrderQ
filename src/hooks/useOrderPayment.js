@@ -1,47 +1,38 @@
-// src/hooks/useOrderPayment.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Creates a PENDING order in Supabase, inserts item snapshots, builds
-// the UPI deep-link using the canteen's own UPI VPA, and generates a QR.
-// DEV_MODE auto-confirms after 4 s; production uses the upi-webhook Edge Fn.
-// ─────────────────────────────────────────────────────────────────────────────
-
-
-// src/hooks/useOrderPayment.js
 import { supabase } from '../lib/supabaseClient'
 
-const DEV_MODE = process.env.REACT_APP_DEV_MODE === 'true'
-
+// 1. Generate the UPI link for the payment apps
 export function buildUPILink(orderId, amount, canteen) {
   const params = new URLSearchParams({
-    pa: canteen.upiVpa,
+    pa: canteen.upi_vpa || canteen.upiVpa, // Support both naming conventions
     pn: canteen.name,
     am: amount.toFixed(2),
-    tn: `CE-${orderId.slice(-8).toUpperCase()}`,
+    tn: `OrderQ-${orderId.slice(-6).toUpperCase()}`,
     cu: 'INR',
   })
   return `upi://pay?${params.toString()}`
 }
 
+// 2. Generate QR Code with fallback
 export async function generateQR(upiLink) {
   try {
     const QRCode = await import('qrcode')
     return await QRCode.default.toDataURL(upiLink, {
       width: 260, margin: 2,
-      color: { dark: '#1a0a00', light: '#ffffff' },
+      color: { dark: '#000000', light: '#ffffff' },
     })
   } catch {
     return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`
   }
 }
 
+// 3. The Main Order Creation Function
 export async function createOrderAndPay(cartItems, pickupSlot, canteen) {
-  // ── Resolve user ID ────────────────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Authentication error — please refresh the page')
+  if (!user) throw new Error('Session expired. Please login again.')
 
   const total = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
-  // ── Create PENDING order ───────────────────────────────────────────────────
+  // Create PENDING order
   const { data: order, error } = await supabase
     .from('orders')
     .insert({
@@ -54,9 +45,12 @@ export async function createOrderAndPay(cartItems, pickupSlot, canteen) {
     .select()
     .single()
 
-  if (error) throw new Error('Could not create order: ' + error.message)
+  if (error) {
+    console.error('[OrderPayment] DB Error:', error);
+    throw error; // This preserves the error.code (e.g., 23505) for your duplicate check
+  }
 
-  // ── Insert order items snapshot ────────────────────────────────────────────
+  // Insert order items
   const { error: itemsErr } = await supabase.from('order_items').insert(
     cartItems.map(item => ({
       order_id:   order.id,
@@ -67,34 +61,10 @@ export async function createOrderAndPay(cartItems, pickupSlot, canteen) {
       quantity:   item.quantity,
     }))
   )
-  if (itemsErr) console.warn('[order_items]', itemsErr.message)
+  if (itemsErr) console.warn('[OrderItems] Warning:', itemsErr.message)
 
-  // ── UPI deep-link + QR ────────────────────────────────────────────────────
   const upiLink   = buildUPILink(order.id, total, canteen)
   const qrDataUrl = await generateQR(upiLink)
-
-  // ── DEV: simulate bank webhook via SECURITY DEFINER RPC after 4 s ─────────
-  // simulate_payment() calls confirm_order() internally — same production path.
-  // Returns JSON: { ok: true, txn_id } or { ok: false, error: '...' }
-  if (DEV_MODE) {
-    setTimeout(async () => {
-      console.log('[DEV] Calling simulate_payment RPC for order:', order.id)
-      const { data: rpcResult, error: rpcErr } = await supabase
-        .rpc('simulate_payment', { p_order_id: order.id })
-
-      if (rpcErr) {
-        // Usually means the SQL was not run yet in Supabase
-        console.error('[DEV] simulate_payment RPC failed:', rpcErr.message,
-          '\n→ Did you run supabase/simulate_payment.sql in Supabase SQL Editor?')
-      } else if (rpcResult?.ok === false) {
-        console.warn('[DEV] simulate_payment returned error:', rpcResult.error,
-          rpcResult.current_status ? '(current status: ' + rpcResult.current_status + ')' : '')
-      } else {
-        console.log('[DEV] ✅ Order confirmed via simulate_payment RPC:',
-          rpcResult?.txn_id, '| amount: ₹' + rpcResult?.amount)
-      }
-    }, 4000)
-  }
 
   return { order, upiLink, qrDataUrl, total }
 }
