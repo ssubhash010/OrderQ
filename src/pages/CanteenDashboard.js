@@ -110,15 +110,36 @@ export default function CanteenDashboard({ onNavigate }) {
     })
   }, [])
 
+  // useEffect(() => {
+  //   if (!staffUser) return
+  //   loadOrders(); fetchStockStatus()
+    
+  //   const channel = supabase.channel(`db-${canteenId}`)
+  //     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `canteen_id=eq.${canteenId}` }, () => loadOrders(true))
+  //     .subscribe()
+
+  //   return () => { supabase.removeChannel(channel) }
+  // }, [staffUser])
   useEffect(() => {
     if (!staffUser) return
     loadOrders(); fetchStockStatus()
     
     const channel = supabase.channel(`db-${canteenId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `canteen_id=eq.${canteenId}` }, () => loadOrders(true))
+      // RT-5 Fix: Full re-fetch on network reconnect
+      .on('system', {}, ({ event }) => {
+         if (event === 'SUBSCRIBED') loadOrders(true) 
+      })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // RT-5 Fix: Full re-fetch on tab focus (waking up from background)
+    const handleVisibility = () => { if (!document.hidden) loadOrders(true) }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => { 
+      supabase.removeChannel(channel) 
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [staffUser])
 
   const toggleStock = async (itemId, isAvailable) => {

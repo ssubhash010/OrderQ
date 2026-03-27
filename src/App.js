@@ -54,6 +54,30 @@ export default function App() {
   }, []);
 
   // ── 2. Auth Initialization ────────────────────────────────────────────────────
+  // useEffect(() => {
+  //   let mounted = true
+  //   const initAuth = async () => {
+  //     const { data: { session: currentSession } } = await supabase.auth.getSession()
+  //     if (mounted) {
+  //       setSession(currentSession)
+  //       setLoading(false)
+  //     }
+  //   }
+  //   initAuth()
+
+  //   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+  //     setSession(nextSession)
+  //     setLoading(false)
+  //   })
+
+  //   return () => {
+  //     mounted = false
+  //     subscription.unsubscribe()
+  //   }
+  // }, [])
+
+
+  // ── 2. Auth Initialization ────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true
     const initAuth = async () => {
@@ -65,9 +89,14 @@ export default function App() {
     }
     initAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
       setLoading(false)
+      
+      // CRITICAL FIX: Force Realtime to reconnect with the new JWT
+      if (event === 'TOKEN_REFRESHED') {
+        supabase.removeAllChannels()
+      }
     })
 
     return () => {

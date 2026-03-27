@@ -35,11 +35,11 @@ function ConflictModal({ existingCanteen, newCanteen, onConfirm, onCancel }) {
 }
 
 // ── Menu Item Card ─────────────────────────────────────────────────────────────
-function MenuItemCard({ item, isSoldOut, qtyInCart, onAdd }) {
+function MenuItemCard({ item, isSoldOut, qtyInCart, onAdd, stockLoaded = true }) {
   const [flash, setFlash] = useState(false)
 
   const handleAdd = () => {
-    if (isSoldOut) return
+    if (isSoldOut || !stockLoaded) return
     onAdd(item)
     setFlash(true)
     setTimeout(() => setFlash(false), 700)
@@ -80,19 +80,21 @@ function MenuItemCard({ item, isSoldOut, qtyInCart, onAdd }) {
       <div className="p-4">
         <h3 className="font-heading text-lg font-semibold text-gray-900 mb-1">{item.name}</h3>
         <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
-        
+
         <button
           onClick={handleAdd}
-          disabled={isSoldOut}
+          disabled={isSoldOut || !stockLoaded}
           className={`w-full rounded-full px-6 py-2.5 font-bold transition-all flex items-center justify-center gap-2 ${
-            isSoldOut 
+            !stockLoaded || isSoldOut 
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
               : flash
                 ? 'bg-green-500 text-white'
                 : 'bg-primary text-white shadow-button active:shadow-none active:translate-y-1 hover:bg-primary/90'
           }`}
         >
-          {isSoldOut ? (
+          {!stockLoaded ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : isSoldOut ? (
             'Unavailable'
           ) : (
             <>
@@ -114,6 +116,7 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
   
   // Dynamic availability state
   const [overrides, setOverrides] = useState(new Set())
+  const [stockLoaded, setStockLoaded] = useState(false)
 
   if (!canteen) {
     onNavigate('canteen-list')
@@ -146,6 +149,7 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
       if (data) {
         setOverrides(new Set(data.map(row => row.item_id)))
       }
+      setStockLoaded(true)
     }
 
     fetchStockStatus()
@@ -178,7 +182,8 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
 
   const handleAddToCart = (item) => {
     // Prevent adding sold out items (extra layer of security)
-    if (overrides.has(item.id)) return
+    // if (overrides.has(item.id)) return
+    if (!stockLoaded || overrides.has(item.id)) return
 
     if (cart.canteen && cart.canteen.id !== canteen.id && cart.items.length > 0) {
       setPendingItem(item)
@@ -264,6 +269,7 @@ export default function CanteenMenuPage({ cart, canteen, onAddToCart, onNavigate
                 isSoldOut={overrides.has(item.id)}
                 qtyInCart={getQty(item.id)}
                 onAdd={handleAddToCart}
+                stockLoaded={stockLoaded}
               />
             ))}
           </div>
