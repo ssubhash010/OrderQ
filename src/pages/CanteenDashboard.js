@@ -140,7 +140,7 @@ export default function CanteenDashboard({ onNavigate }) {
       supabase.removeChannel(channel) 
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [staffUser])
+  }, [staffUser, canteenId])
 
   const toggleStock = async (itemId, isAvailable) => {
     setUpdating(itemId)
