@@ -184,7 +184,8 @@ export default function App() {
       case 'payment-verifying': return <PaymentVerifying orderId={pageData.orderId} onNavigate={navigate} />
       case 'cart': return <CartPage cart={cart} onUpdateCart={setCart} onNavigate={navigate} />
       case 'checkout': return <CheckoutPage checkoutData={pageData} onNavigate={navigate} onClearCart={clearCart} />
-      case 'payment-pending': return <PaymentPendingPage pendingData={pageData} onNavigate={navigate} userId={userId} />
+      // case 'payment-pending': return <PaymentPendingPage pendingData={pageData} onNavigate={navigate} userId={userId} />
+      case 'payment-pending': return <PaymentPendingPage pendingData={pageData} onNavigate={navigate} userId={userId} sessionToken={session?.access_token} />
       case 'order-success': return <OrderSuccessPage successData={pageData} onNavigate={navigate} userId={userId} />
       case 'orders': return <OrdersPage onNavigate={navigate} />
       case 'canteen': return <CanteenDashboard onNavigate={navigate} />
