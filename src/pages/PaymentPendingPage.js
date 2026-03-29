@@ -185,7 +185,7 @@ import { supabase } from '../lib/supabaseClient'
 
 const STORAGE_KEY = 'campuseats_pending_order'
 
-export default function PaymentPendingPage({ pendingData, onNavigate, userId }) {
+export default function PaymentPendingPage({ pendingData, onNavigate, userId, sessionToken }) {
   const { order, total } = pendingData
   const [status, setStatus] = useState('waiting')
   const [timeLeft, setTimeLeft] = useState(600)
