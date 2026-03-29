@@ -244,7 +244,7 @@ export default function PaymentPendingPage({ pendingData, onNavigate, userId, se
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [order.id, userId])
+  }, [order.id, userId, sessionToken])
 
   // 3. Adaptive Jitter Polling
   useEffect(() => {
