@@ -1,0 +1,124 @@
+src/App.css
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Fredoka:wght@300..700&display=swap');
+
+/* ─── CSS Variables ─── */
+:root {
+  --primary: hsl(16 100% 56%);
+  --primary-dark: #E04F1A;
+  --background: hsl(30 100% 99%);
+  --foreground: hsl(0 0% 10%);
+  --radius: 1rem;
+}
+
+/* ─── Base ─── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Tailwind-like utilities (used via className) ─── */
+.App { min-height: 100vh; }
+
+/* ─── Custom component styles ─── */
+.gradient-hero {
+  background: linear-gradient(135deg, #FF5F1F 0%, #FF8C00 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+}
+
+.shadow-button {
+  box-shadow: 0 4px 0 0 #E04F1A;
+}
+
+.shadow-button:active {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Tailwind CDN utility overrides for classes we use ─── */
+/* These are only needed because we don't run the Tailwind CLI.
+   All Tailwind classes are inlined via CDN in index.html. */
+
+
+
+
+public/index.html
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ff5f1f" />
+    <meta name="description" content="CampusEats — Zero Platform Fee Campus Food App" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>CampusEats 🍱</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Fredoka:wght@300..700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: 'hsl(16, 100%, 56%)',
+              background: 'hsl(30, 100%, 99%)',
+            },
+            fontFamily: {
+              sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              heading: ['Fredoka', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
+
+    <style>
+      .gradient-hero    { background: linear-gradient(135deg, #FF5F1F 0%, #FF8C00 100%); }
+      .gradient-success { background: linear-gradient(135deg, #10B981 0%, #34D399 100%); }
+      .shadow-button    { box-shadow: 0 4px 0 0 #E04F1A; }
+      .shadow-button:active { box-shadow: none; transform: translateY(4px); }
+      .card-hover       { transition: all 0.3s ease; }
+      .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.15); }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar     { -ms-overflow-style: none; scrollbar-width: none; }
+      body { font-family: 'DM Sans', sans-serif; background: hsl(30,100%,99%); }
+      h1,h2,h3,h4,h5,h6 { font-family: 'Fredoka', sans-serif; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

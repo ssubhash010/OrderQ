@@ -1,35 +1,49 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Fredoka:wght@300..700&display=swap');
 
-/* ─── CSS Variables ─── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base Layer Overrides ─── */
+@layer base {
+  body {
+    background-color: #121212; /* Deep charcoal base */
+    color: #f3f4f6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Keeping your original fonts as a fallback */
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ─── Custom Utilities ─── */
+@layer utilities {
+  /* Hides the scrollbar for horizontal scrolling areas */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* ─── Legacy Custom Component Styles ─── */
+/* Keeping these just in case you have older components still using them */
 :root {
   --primary: hsl(16 100% 56%);
   --primary-dark: #E04F1A;
-  --background: hsl(30 100% 99%);
-  --foreground: hsl(0 0% 10%);
   --radius: 1rem;
 }
 
-/* ─── Base ─── */
-*, *::before, *::after { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
-  -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-/* ─── Tailwind-like utilities (used via className) ─── */
 .App { min-height: 100vh; }
 
-/* ─── Custom component styles ─── */
 .gradient-hero {
   background: linear-gradient(135deg, #FF5F1F 0%, #FF8C00 100%);
 }
@@ -55,11 +69,3 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
 }
-
-/* Hide scrollbar */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ─── Tailwind CDN utility overrides for classes we use ─── */
-/* These are only needed because we don't run the Tailwind CLI.
-   All Tailwind classes are inlined via CDN in index.html. */
